@@ -102,7 +102,7 @@ class RepositoryView(View):
 
     def get(self, request):
         try:
-            exporters=Exporter.objects.all()
+            exporters=Exporter.objects.select_related('category', 'official').prefetch_related('release_set').all()
             data={"exporters":
                 [
                     {
@@ -127,27 +127,14 @@ class RepositoryView(View):
         except Exception as e:
             return JsonResponse({'message':f"{e}"}, status=400)
 
-    def delete(self, request):
-        try:
-            exporter_id=request.GET['exporter_id']
-            exporter=Exporter.objects.get(id=exporter_id)
-            exporter.delete()
-            return JsonResponse({'message':'SUCCESS'}, status=200)
-
-        except KeyError as e:
-            return JsonResponse({'message':f"{e}_MISSING"}, status=400)
-        except Exporter.DoesNotExist:
-            return JsonResponse({'message':'NO_EXPORTER'}, status=400)
-
 class CategoryView(View):
     def get(self, request):
         categories=Category.objects.all()
         data={"categories":
-        [{   
-            "category_id"  : category.id,
-            "category_name": category.name
-        }
-        for category in categories]
+            [{   
+                "category_id"  : category.id,
+                "category_name": category.name
+            } for category in categories]
         }
         return JsonResponse(data, status=200)
 
@@ -185,5 +172,16 @@ class DetailView(View):
             readme=Exporter.objects.get(id=exporter_id).readme
             return JsonResponse({"data":readme.decode('utf-8')}, status=200)
 
+        except Exporter.DoesNotExist:
+            return JsonResponse({'message':'NO_EXPORTER'}, status=400)
+
+    def delete(self, request, exporter_id):
+        try:
+            exporter=Exporter.objects.get(id=exporter_id)
+            exporter.delete()
+            return JsonResponse({'message':'SUCCESS'}, status=200)
+
+        except KeyError as e:
+            return JsonResponse({'message':f"{e}_MISSING"}, status=400)
         except Exporter.DoesNotExist:
             return JsonResponse({'message':'NO_EXPORTER'}, status=400)
