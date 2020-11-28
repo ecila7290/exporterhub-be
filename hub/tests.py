@@ -149,23 +149,6 @@ class DetailPageTest(TestCase):
         response=client.get('/exporters?id=1')
         self.assertEqual(response.status_code,404)
 
-    def test_delete_exporter_success(self):
-        response=client.delete('/exporters/1')
-        self.assertEqual(response.status_code,200)
-
-    def test_delete_exporter_detail_fail(self):
-        response=client.delete('/exporters/99999')
-        self.assertEqual(response.status_code,400)
-        self.assertEqual(response.json(),
-            {
-                'message':'NO_EXPORTER'
-            }
-        )
-
-    def test_get_exporter_detail_not_found(self):
-        response=client.delete('/exporters?id=1')
-        self.assertEqual(response.status_code,404)
-
 class RepositoryTest(TestCase):
     def setUp(self):
         Category.objects.create(
@@ -257,6 +240,27 @@ class RepositoryTest(TestCase):
         }
         response=client.post('/exporter', data=exporter, content_type='application/json')
         self.maxDiff = None
+        self.assertEqual(response.status_code,400)
+        self.assertEqual(response.json(),
+            {
+                'message':'KEY_ERROR'
+            }
+        )
+    def test_delete_exporter_success(self):
+        response=client.delete('/exporter?exporter_id=1')
+        self.assertEqual(response.status_code,200)
+
+    def test_delete_exporter_fail(self):
+        response=client.delete('/exporter?exporter_id=99999')
+        self.assertEqual(response.status_code,400)
+        self.assertEqual(response.json(),
+            {
+                'message':'NO_EXPORTER'
+            }
+        )
+    
+    def test_delete_exporter_key_error(self):
+        response=client.delete('/exporter?name=1')
         self.assertEqual(response.status_code,400)
         self.assertEqual(response.json(),
             {
