@@ -100,33 +100,6 @@ class RepositoryView(View):
         except KeyError:
             return JsonResponse({'message':'KEY_ERROR'}, status=400)
 
-    def get(self, request):
-        try:
-            exporters=Exporter.objects.select_related('category', 'official').prefetch_related('release_set').all()
-            data={"exporters":
-                [
-                    {
-                        "exporter_id"    : exporter.id,
-                        "name"           : exporter.name,
-                        "logo_url"       : exporter.logo_url,
-                        "category"       : exporter.category.name,
-                        "official"       : exporter.official.name,
-                        "stars"          : exporter.stars,
-                        "repository_url" : exporter.repository_url,
-                        "description"    : exporter.description,
-                        "release"        : [{
-                            "release_version": release.version,
-                            "release_date"   : release.date,
-                            "release_url"    : release.release_url
-                        } for release in exporter.release_set.all()],
-                    }
-                for exporter in exporters]
-            }
-            return JsonResponse(data, status=200)
-
-        except Exception as e:
-            return JsonResponse({'message':f"{e}"}, status=400)
-
 class CategoryView(View):
     def get(self, request):
         categories=Category.objects.all()
@@ -141,7 +114,7 @@ class CategoryView(View):
 class MainView(View):
     def get(self, request):
         try:
-            exporters=Exporter.objects.all()
+            exporters=Exporter.objects.select_related('category', 'official').prefetch_related('release_set').order_by('id')
             data={"exporters":
                 [
                     {
@@ -181,7 +154,5 @@ class DetailView(View):
             exporter.delete()
             return JsonResponse({'message':'SUCCESS'}, status=200)
 
-        except KeyError as e:
-            return JsonResponse({'message':f"{e}_MISSING"}, status=400)
         except Exporter.DoesNotExist:
             return JsonResponse({'message':'NO_EXPORTER'}, status=400)

@@ -5,5 +5,5 @@ urlpatterns = [
     path('', MainView.as_view()),
     path('categories', CategoryView.as_view()),
     path('exporter', RepositoryView.as_view()),
-    path('exporter/<int:exporter_id>', DetailView.as_view()),
+    path('exporters/<int:exporter_id>', DetailView.as_view()),
 ]
