@@ -1,6 +1,7 @@
 import json
 import requests
 import base64
+import re
 
 from django.views import View
 from django.http import JsonResponse
@@ -8,12 +9,14 @@ from django.http import JsonResponse
 from hub.models import Exporter, Release
 from my_settings import TOKEN
 
-api_url='https://api.github.com/repos/'
-
-headers={'Authorization':TOKEN}
+api_url = 'https://api.github.com/repos/'
+headers = {'Authorization':TOKEN}
+PATTERN = r"!\[(\w*|\s|\w+( \w+)*)\]\(([^,:!]*|\/[^,:!]*\.\w+|\w*.\w*)\)"
 
 class RepositoryView(View):
     def get_repo(self, repo_url):
+        if 'https://github.com/' not in repo_url:
+            return False 
         repo_api_url     = api_url+repo_url.replace('https://github.com/','')
         readme_api_url   = repo_api_url+'/readme'
         release_api_url  = repo_api_url+'/releases'
@@ -73,6 +76,15 @@ class RepositoryView(View):
             repo_info = self.get_repo(repo_url)
 
             if repo_info:
+                readme    = base64.b64decode(repo_info["readme"]).decode('utf-8')
+                matches   = re.findall(PATTERN, readme)
+                repo_name = repo_url.replace('https://github.com/','')
+
+                for match in matches:
+                    for element in match:
+                        if '.' in element:
+                            readme=readme.replace(element,f"https://raw.githubusercontent.com/{repo_name}/master/{element}")
+
                 exporter=Exporter.objects.create(
                     category_id    = categories[category],
                     official_id    = official,
@@ -82,10 +94,11 @@ class RepositoryView(View):
                     repository_url = repo_url,
                     description    = repo_info["description"],
                     readme_url     = repo_info["readme_url"],
-                    readme         = base64.b64decode(repo_info["readme"]),
+                    readme         = readme.encode('utf-8'),
                 )
             
                 release=sorted(repo_info["release"], key=lambda x: x["release_date"])
+                
                 for info in release:
                     Release(
                         exporter_id = exporter.id,
@@ -93,6 +106,7 @@ class RepositoryView(View):
                         version     = info["release_version"],
                         date        = info["release_date"]
                     ).save()
+                
                 return JsonResponse({'message':'SUCCESS'}, status=201)
 
             return JsonResponse({'message':'WRONG_REPOSITORY'}, status=400)
@@ -103,8 +117,12 @@ class RepositoryView(View):
     def delete(self, request):
         try:
             exporter_id=request.GET['exporter_id']
-            exporter=Exporter.objects.get(id=exporter_id)
+            exporter=Exporter.objects.filter(id=exporter_id)
+            release=Release.objects.filter(exporter_id=exporter_id)
+            if release.exists():
+                release.delete()
             exporter.delete()
+            
             return JsonResponse({'message':'SUCCESS'}, status=200)
 
         except Exporter.DoesNotExist:

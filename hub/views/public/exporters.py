@@ -20,6 +20,7 @@ class MainView(View):
                         "stars"          : exporter.stars,
                         "repository_url" : exporter.repository_url,
                         "description"    : exporter.description,
+                        "recent_release" : exporter.release_set.last().date if exporter.release_set.all() else '1970-01-01',
                         "release"        : [{
                             "release_version": release.version,
                             "release_date"   : release.date,
