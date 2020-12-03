@@ -1,5 +1,9 @@
 from django.urls import path
-from .views import MainView, CategoryView, RepositoryView, DetailView
+from hub.views.admin.category import CategoryView
+from hub.views.admin.repository import RepositoryView
+from hub.views.public.exporters import MainView
+from hub.views.public.exporter_detail import DetailView
+
 
 urlpatterns = [
     path('', MainView.as_view()),

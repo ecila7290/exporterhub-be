@@ -1,23 +1,38 @@
 import json
 import requests
 import base64
+import re
 
 from django.views import View
 from django.http import JsonResponse
 
-from .models import Exporter, Release, Category
+from hub.models import Exporter, Release
 from my_settings import TOKEN
 
-api_url='https://api.github.com/repos/'
+api_url = 'https://api.github.com/repos/'
+headers = {'Authorization':TOKEN}
+PATTERN = r"!\[(\w*|\s|\w+( \w+)*)\]\(([^,:!]*|\/[^,:!]*\.\w+|\w*.\w*)\)"
 
-headers={'Authorization':TOKEN}
+categories={
+                "Database"     : 1,
+                "Hardware"     : 2,
+                "HTTP"         : 3,
+                "Library"      : 4,
+                "Logging"      : 5,
+                "Messaging"    : 6,
+                "Miscellaneous": 7,
+                "Monitoring"   : 8,
+                "Software"     : 9,
+                "Storage"      : 10
+            }
 
 class RepositoryView(View):
     def get_repo(self, repo_url):
+        if 'https://github.com/' not in repo_url:
+            return False 
         repo_api_url     = api_url+repo_url.replace('https://github.com/','')
         readme_api_url   = repo_api_url+'/readme'
         release_api_url  = repo_api_url+'/releases'
-        default_logo_url = "https://avatars3.githubusercontent.com/u/3380462?v=4"
         repo             = requests.get(repo_api_url, headers=headers)
         
         if repo.status_code==200:
@@ -29,7 +44,7 @@ class RepositoryView(View):
             
             data={
                 "name"           : repo_data["name"],
-                "logo_url"       : default_logo_url,
+                "logo_url"       : repo_data["owner"]["avatar_url"],
                 "stars"          : repo_data["stargazers_count"],
                 "description"    : repo_data["description"],
                 "readme_url"     : repo_url+"/blob/master/README.md",
@@ -45,19 +60,6 @@ class RepositoryView(View):
 
     def post(self, request):
         try:
-            categories={
-                "Database"     : 1,
-                "Hardware"     : 2,
-                "HTTP"         : 3,
-                "Library"      : 4,
-                "Logging"      : 5,
-                "Messaging"    : 6,
-                "Miscellaneous": 7,
-                "Monitoring"   : 8,
-                "Software"     : 9,
-                "Storage"      : 10
-            }
-
             data      = json.loads(request.body)
             repo_url  = data["repo_url"]
             category  = data["category"]
@@ -73,6 +75,15 @@ class RepositoryView(View):
             repo_info = self.get_repo(repo_url)
 
             if repo_info:
+                readme    = base64.b64decode(repo_info["readme"]).decode('utf-8')
+                matches   = re.findall(PATTERN, readme)
+                repo_name = repo_url.replace('https://github.com/','')
+
+                for match in matches:
+                    for element in match:
+                        if '.' in element:
+                            readme=readme.replace(element,f"https://raw.githubusercontent.com/{repo_name}/master/{element}")
+
                 exporter=Exporter.objects.create(
                     category_id    = categories[category],
                     official_id    = official,
@@ -82,10 +93,11 @@ class RepositoryView(View):
                     repository_url = repo_url,
                     description    = repo_info["description"],
                     readme_url     = repo_info["readme_url"],
-                    readme         = base64.b64decode(repo_info["readme"]),
+                    readme         = readme.encode('utf-8'),
                 )
             
                 release=sorted(repo_info["release"], key=lambda x: x["release_date"])
+                
                 for info in release:
                     Release(
                         exporter_id = exporter.id,
@@ -93,6 +105,7 @@ class RepositoryView(View):
                         version     = info["release_version"],
                         date        = info["release_date"]
                     ).save()
+                
                 return JsonResponse({'message':'SUCCESS'}, status=201)
 
             return JsonResponse({'message':'WRONG_REPOSITORY'}, status=400)
@@ -100,59 +113,34 @@ class RepositoryView(View):
         except KeyError:
             return JsonResponse({'message':'KEY_ERROR'}, status=400)
 
-class CategoryView(View):
-    def get(self, request):
-        categories=Category.objects.all()
-        data={"categories":
-            [{   
-                "category_id"  : category.id,
-                "category_name": category.name
-            } for category in categories]
-        }
-        return JsonResponse(data, status=200)
-
-class MainView(View):
-    def get(self, request):
+    def delete(self, request):
         try:
-            exporters=Exporter.objects.select_related('category', 'official').prefetch_related('release_set').order_by('id')
-            data={"exporters":
-                [
-                    {
-                        "exporter_id"    : exporter.id,
-                        "name"           : exporter.name,
-                        "logo_url"       : exporter.logo_url,
-                        "category"       : exporter.category.name,
-                        "official"       : exporter.official.name,
-                        "stars"          : exporter.stars,
-                        "repository_url" : exporter.repository_url,
-                        "description"    : exporter.description,
-                        "release"        : [{
-                            "release_version": release.version,
-                            "release_date"   : release.date,
-                            "release_url"    : release.release_url
-                        } for release in exporter.release_set.all()],
-                    }
-                for exporter in exporters]
-            }
-
-            return JsonResponse(data, status=200)
-        except Exception as e:
-            return JsonResponse({'message':f"{e}"}, status=400)
-
-class DetailView(View):
-    def get(self, request, exporter_id):
-        try:
-            readme=Exporter.objects.get(id=exporter_id).readme
-            return JsonResponse({"data":readme.decode('utf-8')}, status=200)
-
-        except Exporter.DoesNotExist:
-            return JsonResponse({'message':'NO_EXPORTER'}, status=400)
-
-    def delete(self, request, exporter_id):
-        try:
-            exporter=Exporter.objects.get(id=exporter_id)
+            exporter_id = request.GET['exporter_id']
+            exporter    = Exporter.objects.get(id=exporter_id)
+            release     = Release.objects.filter(exporter_id=exporter_id)
+            if release.exists():
+                release.delete()
             exporter.delete()
+            
             return JsonResponse({'message':'SUCCESS'}, status=200)
 
         except Exporter.DoesNotExist:
             return JsonResponse({'message':'NO_EXPORTER'}, status=400)
+        except KeyError:
+            return JsonResponse({'message':'KEY_ERROR'}, status=400)
+
+    def patch(self, request):
+        try:
+            exporter_id       = request.GET['exporter_id']
+            data              = json.loads(request.body)
+            category          = data['category']
+            exporter          = Exporter.objects.get(id=exporter_id)
+            exporter.category = categories[category]
+            exporter.save()
+
+            return JsonResponse({'message':'SUCCESS'}, status=200)
+        
+        except Exporter.DoesNotExist:
+            return JsonResponse({'message':'NO_EXPORTER'}, status=400)
+        except KeyError:
+            return JsonResponse({'message':'KEY_ERROR'}, status=400)
