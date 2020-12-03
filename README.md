@@ -15,3 +15,7 @@ Exporterhub Backend OpenSource.
         TOKEN: "TOKEN must be HERE!!!"
 ```
 
+* Run the docker-compose as below
+```
+docker-compose up -d
+```
