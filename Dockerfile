@@ -4,6 +4,10 @@ FROM python:3.8
 ## It is just Label when it has build automation.
 LABEL version=0.1
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+		netcat \
+	&& rm -rf /var/lib/apt/lists/*
+
 ## OS command for create a directory
 RUN mkdir /data
 

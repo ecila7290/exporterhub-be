@@ -20,14 +20,13 @@ services:
       ports:
          - "8000:8000"
       environment:
-        NAME: exporterhub
-        USER: root
-        PASSWORD: secret
-        HOST: maria_db
-        PORT: "3306"
+        APP_DB_ENGINE: django.db.backends.mysql
+        DB_NAME: exporterhub
+        DB_USER: root
+        DB_PASSWORD: secret
+        DB_HOST: maria_db
+        DB_PORT: "3306"
         SECRET_KEY: "supersecretkey"
-        TOKEN: "TOKEN must be HERE!!!"
+        APP_TOKEN: "TOKEN must be HERE!!!"
       depends_on:
          - maria_db
-      command: sh -c "sleep 10"
-
