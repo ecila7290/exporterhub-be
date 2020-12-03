@@ -42,7 +42,7 @@ def update_exporters():
             readme_data  = readme.json()
             release      = requests.get(release_api_url, headers=headers)
             release_data = release.json()[0] if release.json() else []
-            exporter     = exporters.filter(repository_url=repo_url)
+            exporter     = exporters.get(repository_url=repo_url)
             new_readme   = base64.b64decode(readme_data["content"]).decode('utf-8')
             matches      = re.findall(PATTERN, readme)
             repo_name    = repo_url.replace('https://github.com/','')
@@ -53,7 +53,7 @@ def update_exporters():
                         new_readme=new_readme.replace(element,f"https://raw.githubusercontent.com/{repo_name}/master/{element}")
 
             if str(exporter.modified_at) < repo_data['updated_at']:
-                exporter.update(
+                Exporter.objects.filter(id=exporter.id).update(
                     stars       = repo_data["stargazers_count"],
                     description = repo_data["description"],
                     readme      = new_readme.encode('utf-8')

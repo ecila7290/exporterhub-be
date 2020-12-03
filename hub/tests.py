@@ -84,6 +84,7 @@ class MainPageTest(TestCase):
                     'stars':1,
                     'repository_url':'repo.com',
                     'description':'hello world',
+                    'recent_release':'2020-11-27T15:00:00Z',
                     'release':[{
                         'release_version':'1.0',
                         'release_date':'2020-11-27T15:00:00Z',
@@ -246,6 +247,7 @@ class RepositoryTest(TestCase):
                 'message':'KEY_ERROR'
             }
         )
+        
     def test_delete_exporter_success(self):
         response=client.delete('/exporter?exporter_id=1')
         self.assertEqual(response.status_code,200)

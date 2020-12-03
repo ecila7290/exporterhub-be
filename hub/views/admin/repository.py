@@ -13,6 +13,19 @@ api_url = 'https://api.github.com/repos/'
 headers = {'Authorization':TOKEN}
 PATTERN = r"!\[(\w*|\s|\w+( \w+)*)\]\(([^,:!]*|\/[^,:!]*\.\w+|\w*.\w*)\)"
 
+categories={
+                "Database"     : 1,
+                "Hardware"     : 2,
+                "HTTP"         : 3,
+                "Library"      : 4,
+                "Logging"      : 5,
+                "Messaging"    : 6,
+                "Miscellaneous": 7,
+                "Monitoring"   : 8,
+                "Software"     : 9,
+                "Storage"      : 10
+            }
+
 class RepositoryView(View):
     def get_repo(self, repo_url):
         if 'https://github.com/' not in repo_url:
@@ -20,7 +33,6 @@ class RepositoryView(View):
         repo_api_url     = api_url+repo_url.replace('https://github.com/','')
         readme_api_url   = repo_api_url+'/readme'
         release_api_url  = repo_api_url+'/releases'
-        default_logo_url = "https://avatars3.githubusercontent.com/u/3380462?v=4"
         repo             = requests.get(repo_api_url, headers=headers)
         
         if repo.status_code==200:
@@ -32,7 +44,7 @@ class RepositoryView(View):
             
             data={
                 "name"           : repo_data["name"],
-                "logo_url"       : default_logo_url,
+                "logo_url"       : repo_data["owner"]["avatar_url"],
                 "stars"          : repo_data["stargazers_count"],
                 "description"    : repo_data["description"],
                 "readme_url"     : repo_url+"/blob/master/README.md",
@@ -48,19 +60,6 @@ class RepositoryView(View):
 
     def post(self, request):
         try:
-            categories={
-                "Database"     : 1,
-                "Hardware"     : 2,
-                "HTTP"         : 3,
-                "Library"      : 4,
-                "Logging"      : 5,
-                "Messaging"    : 6,
-                "Miscellaneous": 7,
-                "Monitoring"   : 8,
-                "Software"     : 9,
-                "Storage"      : 10
-            }
-
             data      = json.loads(request.body)
             repo_url  = data["repo_url"]
             category  = data["category"]
@@ -116,15 +115,31 @@ class RepositoryView(View):
 
     def delete(self, request):
         try:
-            exporter_id=request.GET['exporter_id']
-            exporter=Exporter.objects.filter(id=exporter_id)
-            release=Release.objects.filter(exporter_id=exporter_id)
+            exporter_id = request.GET['exporter_id']
+            exporter    = Exporter.objects.get(id=exporter_id)
+            release     = Release.objects.filter(exporter_id=exporter_id)
             if release.exists():
                 release.delete()
             exporter.delete()
             
             return JsonResponse({'message':'SUCCESS'}, status=200)
 
+        except Exporter.DoesNotExist:
+            return JsonResponse({'message':'NO_EXPORTER'}, status=400)
+        except KeyError:
+            return JsonResponse({'message':'KEY_ERROR'}, status=400)
+
+    def patch(self, request):
+        try:
+            exporter_id       = request.GET['exporter_id']
+            data              = json.loads(request.body)
+            category          = data['category']
+            exporter          = Exporter.objects.get(id=exporter_id)
+            exporter.category = categories[category]
+            exporter.save()
+
+            return JsonResponse({'message':'SUCCESS'}, status=200)
+        
         except Exporter.DoesNotExist:
             return JsonResponse({'message':'NO_EXPORTER'}, status=400)
         except KeyError:
