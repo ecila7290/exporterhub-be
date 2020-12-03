@@ -2,23 +2,31 @@ version: '3.1'
 services:
    maria_db:
       image: mariadb:10.4.17
+      command: --default-authentication-plugin=mysql_native_password
+#      command: --init-file /data/application/init.sql
+#      command: "mysql -uroot -psecret < /data/application/init.sql"
       restart: always
       environment:
-        MYSQL_ROOT_PASSWORD: "expoterhubpw"
+        MYSQL_ROOT_PASSWORD: secret
+        MYSQL_DATABASE: exporterhub
+        MYSQL_USER: root
+        MYSQL_PASSWORD: secret
       volumes:
-         - ./db_data:/var/lib/mysql/data
+#         - ./db_data:/var/lib/mysql/data
+         - ./db_data:/var/lib/mysql/
+#         - ./exporterhub_schema.sql:/data/application/init.sql
    api:
       image: nexclipper/exporterhub-be:0.1
       ports:
          - "8000:8000"
       environment:
-        ENGINE: django.db.backends.mysql
-        NAME: exporterhub
-        USER: root
-        PASSWORD: 'expoterhubpw'
-        HOST: maria_db
-        PORT: "3306"
+        APP_DB_ENGINE: django.db.backends.mysql
+        DB_NAME: exporterhub
+        DB_USER: root
+        DB_PASSWORD: secret
+        DB_HOST: maria_db
+        DB_PORT: "3306"
         SECRET_KEY: "supersecretkey"
+        APP_TOKEN: "TOKEN must be HERE!!!"
       depends_on:
          - maria_db
-

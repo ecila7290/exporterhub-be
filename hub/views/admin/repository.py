@@ -10,7 +10,7 @@ from hub.models import Exporter, Release
 from my_settings import TOKEN
 
 api_url = 'https://api.github.com/repos/'
-headers = {'Authorization':TOKEN}
+headers = {'Authorization' : 'token ' + TOKEN} 
 PATTERN = r"!\[(\w*|\s|\w+( \w+)*)\]\(([^,:!]*|\/[^,:!]*\.\w+|\w*.\w*)\)"
 
 categories={

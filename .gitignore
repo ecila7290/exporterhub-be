@@ -132,7 +132,6 @@ dmypy.json
 .pyre/
 
 # else
-my_settings.py
 data_uploader.py
 exporter_list.py
 .vscode
