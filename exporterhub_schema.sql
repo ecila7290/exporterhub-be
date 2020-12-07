@@ -142,7 +142,7 @@ CREATE TABLE `exporters` (
   KEY `exporters_category_id_d7f8c1ea_fk_categories_id` (`category_id`),
   CONSTRAINT `exporters_category_id_d7f8c1ea_fk_categories_id` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`),
   CONSTRAINT `exporters_official_id_9940ac09_fk_officials_id` FOREIGN KEY (`official_id`) REFERENCES `officials` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -198,7 +198,7 @@ CREATE TABLE `releases` (
   PRIMARY KEY (`id`),
   KEY `releases_exporter_id_73aa308f_fk_exporters_id` (`exporter_id`),
   CONSTRAINT `releases_exporter_id_73aa308f_fk_exporters_id` FOREIGN KEY (`exporter_id`) REFERENCES `exporters` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=582 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=588 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -210,4 +210,4 @@ CREATE TABLE `releases` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-12-02 10:54:01
+-- Dump completed on 2020-12-04 20:29:00
